@@ -1,0 +1,403 @@
+/**
+ * Parser for TradeMinutes DSL
+ * Converts tokens into an Abstract Syntax Tree (AST)
+ */
+
+const Lexer = require('./lexer');
+
+class Parser {
+  constructor(input) {
+    this.lexer = new Lexer(input);
+    this.tokens = [];
+    this.current = 0;
+  }
+
+  /**
+   * Parse the input and return AST
+   * @returns {Object} Abstract Syntax Tree
+   */
+  parse() {
+    this.tokens = this.lexer.tokenize();
+    this.current = 0;
+    
+    const ast = {
+      type: 'Program',
+      workflows: [],
+      variables: []
+    };
+
+    while (!this.isAtEnd()) {
+      if (this.check('KEYWORD', 'workflow')) {
+        ast.workflows.push(this.parseWorkflow());
+      } else if (this.check('KEYWORD', 'let') || this.check('KEYWORD', 'var') || this.check('KEYWORD', 'const')) {
+        ast.variables.push(this.parseVariableDeclaration());
+      } else {
+        this.advance(); // Skip unknown tokens
+      }
+    }
+
+    return ast;
+  }
+
+  /**
+   * Parse a workflow definition
+   */
+  parseWorkflow() {
+    this.consume('KEYWORD', 'workflow', 'Expected "workflow" keyword');
+    
+    const name = this.consume('STRING', null, 'Expected workflow name');
+    this.consume('LBRACE', null, 'Expected "{" after workflow name');
+    
+    const steps = [];
+    while (!this.check('RBRACE') && !this.isAtEnd()) {
+      steps.push(this.parseStep());
+    }
+    
+    this.consume('RBRACE', null, 'Expected "}" to close workflow');
+    
+    return {
+      type: 'Workflow',
+      name: name.value,
+      steps
+    };
+  }
+
+  /**
+   * Parse a step definition
+   */
+  parseStep() {
+    if (this.check('KEYWORD', 'if')) {
+      return this.parseConditionalStatement();
+    } else {
+      this.consume('KEYWORD', 'step', 'Expected "step" keyword');
+      
+      const stepNumber = this.consume('NUMBER', null, 'Expected step number');
+      this.consume('COLON', null, 'Expected ":" after step number');
+      
+      const command = this.parseCommand();
+      
+      return {
+        type: 'Step',
+        number: stepNumber.value,
+        command
+      };
+    }
+  }
+
+  /**
+   * Parse a conditional statement (if/else)
+   */
+  parseConditionalStatement() {
+    this.consume('KEYWORD', 'if', 'Expected "if" keyword');
+    this.consume('LPAREN', null, 'Expected "(" after if');
+    
+    const condition = this.parseCondition();
+    
+    this.consume('RPAREN', null, 'Expected ")" after condition');
+    this.consume('LBRACE', null, 'Expected "{" after condition');
+    
+    const ifSteps = [];
+    while (!this.check('RBRACE') && !this.isAtEnd()) {
+      ifSteps.push(this.parseStep());
+    }
+    this.consume('RBRACE', null, 'Expected "}" to close if block');
+    
+    let elseSteps = [];
+    if (this.check('KEYWORD', 'else')) {
+      this.advance(); // consume 'else'
+      this.consume('LBRACE', null, 'Expected "{" after else');
+      
+      while (!this.check('RBRACE') && !this.isAtEnd()) {
+        elseSteps.push(this.parseStep());
+      }
+      this.consume('RBRACE', null, 'Expected "}" to close else block');
+    }
+    
+    return {
+      type: 'ConditionalStatement',
+      condition,
+      ifSteps,
+      elseSteps
+    };
+  }
+
+  /**
+   * Parse a condition (comparison expression)
+   */
+  parseCondition() {
+    const left = this.parseConditionExpression();
+    
+    if (this.match('EQUAL_EQUAL', null) || this.match('NOT_EQUAL', null) || 
+        this.match('GREATER', null) || this.match('LESS', null) ||
+        this.match('GREATER_EQUAL', null) || this.match('LESS_EQUAL', null)) {
+      const operator = this.previous();
+      const right = this.parseConditionExpression();
+      
+      return {
+        type: 'ComparisonExpression',
+        operator: operator.value,
+        left,
+        right
+      };
+    }
+    
+    // If no comparison operator, treat as boolean expression
+    return {
+      type: 'BooleanExpression',
+      expression: left
+    };
+  }
+
+  /**
+   * Parse a condition expression (supports step references with properties)
+   */
+  parseConditionExpression() {
+    if (this.match('KEYWORD', 'step')) {
+      // Handle step reference like "step 1.status"
+      const stepKeyword = this.previous();
+      const stepNumber = this.consume('NUMBER', null, 'Expected step number after "step"');
+      
+      let expression = {
+        type: 'StepReference',
+        stepNumber: stepNumber.value
+      };
+      
+      // Handle property access (e.g., step 1.status)
+      if (this.match('DOT', null)) {
+        const property = this.consume('IDENTIFIER', null, 'Expected property name after "."');
+        expression = {
+          type: 'PropertyAccess',
+          object: expression,
+          property: property.value
+        };
+      }
+      
+      return expression;
+    } else {
+      return this.parseExpression();
+    }
+  }
+
+  /**
+   * Parse a variable declaration
+   */
+  parseVariableDeclaration() {
+    const declarationType = this.advance(); // consume 'let', 'var', or 'const'
+    const variableName = this.consume('IDENTIFIER', null, 'Expected variable name');
+    this.consume('EQUALS', null, 'Expected "=" after variable name');
+    
+    const value = this.parseVariableValue();
+    
+    return {
+      type: 'VariableDeclaration',
+      declarationType: declarationType.value,
+      name: variableName.value,
+      value
+    };
+  }
+
+  /**
+   * Parse a variable value (string, number, identifier, or expression)
+   */
+  parseVariableValue() {
+    return this.parseExpression();
+  }
+
+  /**
+   * Parse an expression (supports string concatenation)
+   */
+  parseExpression() {
+    let left = this.parsePrimary();
+    
+    while (this.match('PLUS', null)) {
+      const operator = this.previous();
+      const right = this.parsePrimary();
+      
+      left = {
+        type: 'BinaryExpression',
+        operator: operator.value,
+        left: left,
+        right: right
+      };
+    }
+    
+    return left;
+  }
+
+  /**
+   * Parse a primary expression (string, number, identifier, or property access)
+   */
+  parsePrimary() {
+    if (this.match('STRING', null)) {
+      return {
+        type: 'StringLiteral',
+        value: this.previous().value
+      };
+    } else if (this.match('NUMBER', null)) {
+      return {
+        type: 'NumberLiteral',
+        value: this.previous().value
+      };
+    } else if (this.match('IDENTIFIER', null)) {
+      let expression = {
+        type: 'Identifier',
+        value: this.previous().value
+      };
+      
+      // Handle property access (e.g., step 1.status)
+      while (this.match('DOT', null)) {
+        const property = this.consume('IDENTIFIER', null, 'Expected property name after "."');
+        expression = {
+          type: 'PropertyAccess',
+          object: expression,
+          property: property.value
+        };
+      }
+      
+      return expression;
+    } else {
+      throw new Error(`Expected expression at position ${this.peek().position}`);
+    }
+  }
+
+  /**
+   * Parse a command with its arguments
+   */
+  parseCommand() {
+    const commandName = this.consume('KEYWORD', null, 'Expected command name');
+    this.consume('LPAREN', null, 'Expected "(" after command name');
+    
+    const args = [];
+    
+    // Parse arguments
+    while (true) {
+      const currentToken = this.peek();
+      
+      // If we're at the closing parenthesis, we're done
+      if (currentToken.type === 'RPAREN') {
+        break;
+      }
+      
+      // If we're at the end, that's an error
+      if (currentToken.type === 'EOF') {
+        throw new Error(`Unexpected end of input at position ${currentToken.position}`);
+      }
+      
+      // Parse the argument
+      args.push(this.parseArgument());
+      
+      // Check if we're done or need a comma
+      const nextToken = this.peek();
+      if (nextToken.type === 'RPAREN') {
+        break;
+      } else if (nextToken.type === 'COMMA') {
+        this.advance(); // consume the comma
+      } else {
+        throw new Error(`Expected "," or ")" at position ${nextToken.position}`);
+      }
+    }
+    
+    // Consume the closing parenthesis
+    this.consume('RPAREN', null, 'Expected ")" to close command arguments');
+    
+    return {
+      type: 'Command',
+      name: commandName.value,
+      arguments: args
+    };
+  }
+
+  /**
+   * Parse a command argument
+   */
+  parseArgument() {
+    if (this.match('STRING', null)) {
+      return {
+        type: 'StringLiteral',
+        value: this.previous().value
+      };
+    } else if (this.match('NUMBER', null)) {
+      return {
+        type: 'NumberLiteral',
+        value: this.previous().value
+      };
+    } else if (this.match('KEYWORD', 'step')) {
+      // Reference to another step
+      const stepRef = this.consume('NUMBER', null, 'Expected step number after "step"');
+      return {
+        type: 'StepReference',
+        stepNumber: stepRef.value
+      };
+    } else if (this.match('IDENTIFIER', null)) {
+      return {
+        type: 'Identifier',
+        value: this.previous().value
+      };
+    } else {
+      throw new Error(`Unexpected token at position ${this.peek().position}`);
+    }
+  }
+
+  /**
+   * Check if current token matches expected type and value
+   */
+  match(type, value) {
+    if (this.check(type, value)) {
+      this.advance();
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Check if current token is of expected type and value
+   */
+  check(type, value) {
+    if (this.isAtEnd()) return false;
+    const token = this.peek();
+    return token.type === type && (value === null || value === undefined || token.value === value);
+  }
+
+  /**
+   * Consume a token of expected type and value
+   */
+  consume(type, value, message) {
+    if (this.check(type, value)) {
+      return this.advance();
+    }
+    throw new Error(`${message} at position ${this.peek().position}`);
+  }
+
+  /**
+   * Advance to next token
+   */
+  advance() {
+    if (!this.isAtEnd()) {
+      this.current++;
+    }
+    return this.previous();
+  }
+
+  /**
+   * Check if we've reached the end of tokens
+   */
+  isAtEnd() {
+    return this.peek().type === 'EOF';
+  }
+
+  /**
+   * Get current token without advancing
+   */
+  peek() {
+    return this.tokens[this.current];
+  }
+
+  /**
+   * Get previous token
+   */
+  previous() {
+    return this.tokens[this.current - 1];
+  }
+}
+
+module.exports = Parser; 
