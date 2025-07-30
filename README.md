@@ -1,16 +1,35 @@
 # TradeMinutes DSL Parser
 
-A Domain-Specific Language (DSL) parser and interpreter for the TradeMinutes AI workflow builder. This parser converts simple DSL syntax into ReactFlow-compatible JSON format for visual workflow representation.
+## 🧠 **The Brain of TradeMinutes AI Agent**
+
+The TradeMinutes DSL Parser is the **intelligent core** that powers the TradeMinutes AI agent's ability to understand, process, and execute complex workflow instructions. Think of it as the **brain** that converts human-readable workflow descriptions into structured, executable commands that the AI agent can understand and act upon.
+
+### 🎯 **What It Does**
+- **Understands** workflow instructions written in natural DSL syntax
+- **Processes** complex multi-step workflows with dependencies
+- **Validates** workflow logic to prevent errors and conflicts
+- **Converts** human intent into machine-readable structures
+- **Enables** the AI agent to execute sophisticated trading and analysis workflows
+
+### 🚀 **How It Powers the AI Agent**
+
+The parser acts as the **cognitive layer** between human input and AI execution:
+
+```
+Human Input → DSL Parser → Structured Data → AI Agent → Execution
+     ↓              ↓              ↓              ↓           ↓
+"Fetch data" → Parse & Validate → AST → AI Processes → Trade Actions
+```
 
 ## Features
 
-- **Simple DSL Syntax**: Write workflows in a human-readable format
-- **Validation**: Comprehensive validation including circular reference detection
-- **ReactFlow Integration**: Generates JSON compatible with ReactFlow for visual representation
-- **Bidirectional Conversion**: Convert ReactFlow JSON back to DSL
-- **Error Handling**: Detailed error messages and warnings
-- **Comment Support**: Single-line and multi-line comments
-- **Modular Design**: Clean, extensible architecture
+- **🧠 Intelligent Parsing**: Converts natural DSL syntax into structured workflows
+- **🔍 Smart Validation**: Detects circular references, invalid steps, and logical errors
+- **🎨 Visual Integration**: Generates ReactFlow-compatible JSON for workflow visualization
+- **🔄 Bidirectional Conversion**: Converts between DSL and visual representations
+- **💬 Natural Language Support**: Handles comments and human-readable syntax
+- **⚡ Variable System**: Supports dynamic values and reusable components
+- **🛡️ Error Prevention**: Comprehensive validation prevents workflow failures
 
 ## Installation
 
@@ -49,6 +68,20 @@ workflow "WorkflowName" {
   step 1: command_name("argument1", "argument2")
   step 2: another_command(step 1)
   step 3: final_command("data", step 2)
+}
+```
+
+### Variable Declarations (New!)
+
+```dsl
+let email = "user@example.com"
+let api_key = "abc123"
+let retry_count = 3
+
+workflow "MyFlow" {
+  step 1: fetch("https://api.com")
+  step 2: send_email(email, step 1)
+  step 3: notify("Process completed")
 }
 ```
 
@@ -295,4 +328,4 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-For issues and questions, please open an issue on the GitHub repository. # tmflow-dsl
+For issues and questions, please open an issue on the GitHub repository.
