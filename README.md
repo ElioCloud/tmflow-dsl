@@ -293,10 +293,144 @@ The parser consists of several modular components:
 
 1. **Lexer** (`src/lexer.js`): Tokenizes the input string
 2. **Parser** (`src/parser.js`): Converts tokens to Abstract Syntax Tree (AST)
-3. **Validator** (`src/validator.js`): Validates the AST for errors and warnings
-4. **Generator** (`src/generator.js`): Converts AST to ReactFlow JSON
-5. **DSL Converter** (`src/dsl-converter.js`): Converts ReactFlow JSON back to DSL
-6. **Main Module** (`src/index.js`): Orchestrates the entire pipeline
+3. **Executor** (`src/executor.js`): Executes the AST and runs commands
+4. **Validator** (`src/validator.js`): Validates the AST for errors and warnings
+5. **Generator** (`src/generator.js`): Converts AST to ReactFlow JSON
+6. **DSL Converter** (`src/dsl-converter.js`): Converts ReactFlow JSON back to DSL
+7. **Main Module** (`src/index.js`): Orchestrates the entire pipeline
+
+## 🚀 **Executor - Running DSL Workflows**
+
+The **Executor** is the component that actually runs your DSL workflows and executes commands. It takes the parsed AST and executes each step, showing real output on the terminal.
+
+### **How to Use the Executor**
+
+```javascript
+const Parser = require('./src/parser');
+const Executor = require('./src/executor');
+
+// Parse your DSL
+const parser = new Parser(dsl);
+const ast = parser.parse();
+
+// Execute the workflow
+const executor = new Executor();
+executor.execute(ast);
+```
+
+### **Example with Print Statements**
+
+```dsl
+workflow "PrintTest" {
+  step 1: fetch("https://api.com")
+  if (step 1.status == "success") {
+    step 2: print("✅ Success! Data fetched successfully")
+    step 3: send_email("success@email.com", step 1)
+  } else {
+    step 4: print("❌ Error: Failed to fetch data")
+    step 5: notify("error@email.com", "Failed")
+  }
+}
+```
+
+**Output:**
+```
+🚀 Executing DSL Workflow...
+
+📋 Executing workflow: PrintTest
+   Steps: 2
+
+   Step 1:
+     Command: fetch
+     Arguments: "https://api.com"
+     🌐 FETCHING: https://api.com
+
+   Step 2:
+     🔀 Conditional Statement:
+     Condition: ✅ TRUE
+     Executing IF branch (2 steps):
+       IF Step 1:
+     Command: print
+     Arguments: "✅ Success! Data fetched successfully"
+     📤 OUTPUT: ✅ Success! Data fetched successfully
+       IF Step 2:
+     Command: send_email
+     Arguments: "success@email.com", {...}
+     📧 SENDING EMAIL: success@email.com
+
+🎉 Execution completed!
+```
+
+### **Supported Commands in Executor**
+
+- **`print(message)`** - Prints message to terminal
+- **`log(message)`** - Logs message to terminal  
+- **`fetch(url)`** - Fetches data from URL (mock)
+- **`send_email(to, data)`** - Sends email (mock)
+- **`notify(recipient, message)`** - Sends notification (mock)
+- **`summarize(data)`** - Summarizes data (mock)
+- **`analyze(data, type)`** - Analyzes data (mock)
+- **`filter(data, criteria)`** - Filters data (mock)
+- **`transform(data, format)`** - Transforms data (mock)
+- **`store(data, location)`** - Stores data (mock)
+
+### **Variable Support**
+
+The executor supports variables and expressions:
+
+```dsl
+let base_url = "https://api.com"
+let endpoint = "/users"
+let full_url = base_url + endpoint
+
+workflow "VariableTest" {
+  step 1: fetch(full_url)
+  step 2: print("Fetched from: " + full_url)
+  step 3: send_email("user@email.com", step 1)
+}
+```
+
+### **Conditional Execution**
+
+The executor properly handles if/else statements:
+
+```dsl
+workflow "ConditionalTest" {
+  step 1: fetch("https://api.com")
+  if (step 1.status == "success") {
+    step 2: print("✅ Success!")
+    step 3: send_email("success@email.com", step 1)
+  } else {
+    step 4: print("❌ Failed!")
+    step 5: notify("admin@email.com", "Error occurred")
+  }
+}
+```
+
+### **Step Results**
+
+The executor maintains step results that can be referenced:
+
+```dsl
+workflow "StepReferenceTest" {
+  step 1: fetch("https://api.com")
+  step 2: print("Step 1 result: " + step 1.status)
+  step 3: send_email("user@email.com", step 1.data)
+}
+```
+
+### **Running Tests**
+
+```bash
+# Test parsing and execution
+node test/test-conditionallogic.js
+
+# Test variables
+node test/test-variable.js
+
+# Test string concatenation  
+node test/test-concatenation.js
+```
 
 ## Extending the Parser
 

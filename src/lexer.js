@@ -40,6 +40,7 @@ class Lexer {
   static KEYWORDS = [
     'workflow', 'step', 'fetch', 'summarize', 'send_email',
     'analyze', 'filter', 'transform', 'store', 'notify',
+    'print', 'log',
     'let', 'var', 'const', 'if', 'else'
   ];
 
