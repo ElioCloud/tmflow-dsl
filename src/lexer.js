@@ -24,6 +24,13 @@ class Lexer {
     RBRACE: 'RBRACE',
     EQUALS: 'EQUALS',
     PLUS: 'PLUS',
+    DOT: 'DOT',
+    EQUAL_EQUAL: 'EQUAL_EQUAL',
+    NOT_EQUAL: 'NOT_EQUAL',
+    GREATER: 'GREATER',
+    LESS: 'LESS',
+    GREATER_EQUAL: 'GREATER_EQUAL',
+    LESS_EQUAL: 'LESS_EQUAL',
     WHITESPACE: 'WHITESPACE',
     COMMENT: 'COMMENT',
     EOF: 'EOF'
@@ -33,7 +40,7 @@ class Lexer {
   static KEYWORDS = [
     'workflow', 'step', 'fetch', 'summarize', 'send_email',
     'analyze', 'filter', 'transform', 'store', 'notify',
-    'let', 'var', 'const'
+    'let', 'var', 'const', 'if', 'else'
   ];
 
   /**
@@ -57,6 +64,8 @@ class Lexer {
         this.tokens.push(this.readNumber());
       } else if (this.isLetter(char)) {
         this.tokens.push(this.readIdentifier());
+      } else if (this.isDigit(char)) {
+        this.tokens.push(this.readNumber());
       } else if (char === ':') {
         this.tokens.push({ type: Lexer.TOKEN_TYPES.COLON, value: ':', position: this.position++ });
       } else if (char === ',') {
@@ -70,9 +79,37 @@ class Lexer {
       } else if (char === '}') {
         this.tokens.push({ type: Lexer.TOKEN_TYPES.RBRACE, value: '}', position: this.position++ });
       } else if (char === '=') {
-        this.tokens.push({ type: Lexer.TOKEN_TYPES.EQUALS, value: '=', position: this.position++ });
+        if (this.position + 1 < this.input.length && this.input[this.position + 1] === '=') {
+          this.tokens.push({ type: Lexer.TOKEN_TYPES.EQUAL_EQUAL, value: '==', position: this.position });
+          this.position += 2;
+        } else {
+          this.tokens.push({ type: Lexer.TOKEN_TYPES.EQUALS, value: '=', position: this.position++ });
+        }
+      } else if (char === '!') {
+        if (this.position + 1 < this.input.length && this.input[this.position + 1] === '=') {
+          this.tokens.push({ type: Lexer.TOKEN_TYPES.NOT_EQUAL, value: '!=', position: this.position });
+          this.position += 2;
+        } else {
+          throw new Error(`Unexpected character: ${char} at position ${this.position}`);
+        }
+      } else if (char === '>') {
+        if (this.position + 1 < this.input.length && this.input[this.position + 1] === '=') {
+          this.tokens.push({ type: Lexer.TOKEN_TYPES.GREATER_EQUAL, value: '>=', position: this.position });
+          this.position += 2;
+        } else {
+          this.tokens.push({ type: Lexer.TOKEN_TYPES.GREATER, value: '>', position: this.position++ });
+        }
+      } else if (char === '<') {
+        if (this.position + 1 < this.input.length && this.input[this.position + 1] === '=') {
+          this.tokens.push({ type: Lexer.TOKEN_TYPES.LESS_EQUAL, value: '<=', position: this.position });
+          this.position += 2;
+        } else {
+          this.tokens.push({ type: Lexer.TOKEN_TYPES.LESS, value: '<', position: this.position++ });
+        }
       } else if (char === '+') {
         this.tokens.push({ type: Lexer.TOKEN_TYPES.PLUS, value: '+', position: this.position++ });
+      } else if (char === '.') {
+        this.tokens.push({ type: Lexer.TOKEN_TYPES.DOT, value: '.', position: this.position++ });
       } else {
         throw new Error(`Unexpected character: ${char} at position ${this.position}`);
       }

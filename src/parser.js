@@ -66,18 +66,116 @@ class Parser {
    * Parse a step definition
    */
   parseStep() {
-    this.consume('KEYWORD', 'step', 'Expected "step" keyword');
+    if (this.check('KEYWORD', 'if')) {
+      return this.parseConditionalStatement();
+    } else {
+      this.consume('KEYWORD', 'step', 'Expected "step" keyword');
+      
+      const stepNumber = this.consume('NUMBER', null, 'Expected step number');
+      this.consume('COLON', null, 'Expected ":" after step number');
+      
+      const command = this.parseCommand();
+      
+      return {
+        type: 'Step',
+        number: stepNumber.value,
+        command
+      };
+    }
+  }
+
+  /**
+   * Parse a conditional statement (if/else)
+   */
+  parseConditionalStatement() {
+    this.consume('KEYWORD', 'if', 'Expected "if" keyword');
+    this.consume('LPAREN', null, 'Expected "(" after if');
     
-    const stepNumber = this.consume('NUMBER', null, 'Expected step number');
-    this.consume('COLON', null, 'Expected ":" after step number');
+    const condition = this.parseCondition();
     
-    const command = this.parseCommand();
+    this.consume('RPAREN', null, 'Expected ")" after condition');
+    this.consume('LBRACE', null, 'Expected "{" after condition');
+    
+    const ifSteps = [];
+    while (!this.check('RBRACE') && !this.isAtEnd()) {
+      ifSteps.push(this.parseStep());
+    }
+    this.consume('RBRACE', null, 'Expected "}" to close if block');
+    
+    let elseSteps = [];
+    if (this.check('KEYWORD', 'else')) {
+      this.advance(); // consume 'else'
+      this.consume('LBRACE', null, 'Expected "{" after else');
+      
+      while (!this.check('RBRACE') && !this.isAtEnd()) {
+        elseSteps.push(this.parseStep());
+      }
+      this.consume('RBRACE', null, 'Expected "}" to close else block');
+    }
     
     return {
-      type: 'Step',
-      number: stepNumber.value,
-      command
+      type: 'ConditionalStatement',
+      condition,
+      ifSteps,
+      elseSteps
     };
+  }
+
+  /**
+   * Parse a condition (comparison expression)
+   */
+  parseCondition() {
+    const left = this.parseConditionExpression();
+    
+    if (this.match('EQUAL_EQUAL', null) || this.match('NOT_EQUAL', null) || 
+        this.match('GREATER', null) || this.match('LESS', null) ||
+        this.match('GREATER_EQUAL', null) || this.match('LESS_EQUAL', null)) {
+      const operator = this.previous();
+      const right = this.parseConditionExpression();
+      
+      return {
+        type: 'ComparisonExpression',
+        operator: operator.value,
+        left,
+        right
+      };
+    }
+    
+    // If no comparison operator, treat as boolean expression
+    return {
+      type: 'BooleanExpression',
+      expression: left
+    };
+  }
+
+  /**
+   * Parse a condition expression (supports step references with properties)
+   */
+  parseConditionExpression() {
+    if (this.match('KEYWORD', 'step')) {
+      // Handle step reference like "step 1.status"
+      const stepKeyword = this.previous();
+      const stepNumber = this.consume('NUMBER', null, 'Expected step number after "step"');
+      
+      let expression = {
+        type: 'StepReference',
+        stepNumber: stepNumber.value
+      };
+      
+      // Handle property access (e.g., step 1.status)
+      if (this.match('DOT', null)) {
+        const property = this.consume('IDENTIFIER', null, 'Expected property name after "."');
+        expression = {
+          type: 'PropertyAccess',
+          object: expression,
+          property: property.value
+        };
+      }
+      
+      return expression;
+    } else {
+      return this.parseExpression();
+    }
   }
 
   /**
@@ -127,7 +225,7 @@ class Parser {
   }
 
   /**
-   * Parse a primary expression (string, number, or identifier)
+   * Parse a primary expression (string, number, identifier, or property access)
    */
   parsePrimary() {
     if (this.match('STRING', null)) {
@@ -141,10 +239,22 @@ class Parser {
         value: this.previous().value
       };
     } else if (this.match('IDENTIFIER', null)) {
-      return {
+      let expression = {
         type: 'Identifier',
         value: this.previous().value
       };
+      
+      // Handle property access (e.g., step 1.status)
+      while (this.match('DOT', null)) {
+        const property = this.consume('IDENTIFIER', null, 'Expected property name after "."');
+        expression = {
+          type: 'PropertyAccess',
+          object: expression,
+          property: property.value
+        };
+      }
+      
+      return expression;
     } else {
       throw new Error(`Expected expression at position ${this.peek().position}`);
     }
