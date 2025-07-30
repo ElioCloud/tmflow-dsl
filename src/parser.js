@@ -99,9 +99,37 @@ class Parser {
   }
 
   /**
-   * Parse a variable value (string, number, or identifier)
+   * Parse a variable value (string, number, identifier, or expression)
    */
   parseVariableValue() {
+    return this.parseExpression();
+  }
+
+  /**
+   * Parse an expression (supports string concatenation)
+   */
+  parseExpression() {
+    let left = this.parsePrimary();
+    
+    while (this.match('PLUS', null)) {
+      const operator = this.previous();
+      const right = this.parsePrimary();
+      
+      left = {
+        type: 'BinaryExpression',
+        operator: operator.value,
+        left: left,
+        right: right
+      };
+    }
+    
+    return left;
+  }
+
+  /**
+   * Parse a primary expression (string, number, or identifier)
+   */
+  parsePrimary() {
     if (this.match('STRING', null)) {
       return {
         type: 'StringLiteral',
@@ -118,7 +146,7 @@ class Parser {
         value: this.previous().value
       };
     } else {
-      throw new Error(`Expected variable value at position ${this.peek().position}`);
+      throw new Error(`Expected expression at position ${this.peek().position}`);
     }
   }
 
