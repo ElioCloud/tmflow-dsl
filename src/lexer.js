@@ -23,6 +23,7 @@ class Lexer {
     LBRACE: 'LBRACE',
     RBRACE: 'RBRACE',
     EQUALS: 'EQUALS',
+    PLUS: 'PLUS',
     WHITESPACE: 'WHITESPACE',
     COMMENT: 'COMMENT',
     EOF: 'EOF'
@@ -31,7 +32,8 @@ class Lexer {
   // Keywords in the DSL
   static KEYWORDS = [
     'workflow', 'step', 'fetch', 'summarize', 'send_email',
-    'analyze', 'filter', 'transform', 'store', 'notify'
+    'analyze', 'filter', 'transform', 'store', 'notify',
+    'let', 'var', 'const'
   ];
 
   /**
@@ -69,6 +71,8 @@ class Lexer {
         this.tokens.push({ type: Lexer.TOKEN_TYPES.RBRACE, value: '}', position: this.position++ });
       } else if (char === '=') {
         this.tokens.push({ type: Lexer.TOKEN_TYPES.EQUALS, value: '=', position: this.position++ });
+      } else if (char === '+') {
+        this.tokens.push({ type: Lexer.TOKEN_TYPES.PLUS, value: '+', position: this.position++ });
       } else {
         throw new Error(`Unexpected character: ${char} at position ${this.position}`);
       }

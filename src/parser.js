@@ -22,12 +22,15 @@ class Parser {
     
     const ast = {
       type: 'Program',
-      workflows: []
+      workflows: [],
+      variables: []
     };
 
     while (!this.isAtEnd()) {
       if (this.check('KEYWORD', 'workflow')) {
         ast.workflows.push(this.parseWorkflow());
+      } else if (this.check('KEYWORD', 'let') || this.check('KEYWORD', 'var') || this.check('KEYWORD', 'const')) {
+        ast.variables.push(this.parseVariableDeclaration());
       } else {
         this.advance(); // Skip unknown tokens
       }
@@ -75,6 +78,48 @@ class Parser {
       number: stepNumber.value,
       command
     };
+  }
+
+  /**
+   * Parse a variable declaration
+   */
+  parseVariableDeclaration() {
+    const declarationType = this.advance(); // consume 'let', 'var', or 'const'
+    const variableName = this.consume('IDENTIFIER', null, 'Expected variable name');
+    this.consume('EQUALS', null, 'Expected "=" after variable name');
+    
+    const value = this.parseVariableValue();
+    
+    return {
+      type: 'VariableDeclaration',
+      declarationType: declarationType.value,
+      name: variableName.value,
+      value
+    };
+  }
+
+  /**
+   * Parse a variable value (string, number, or identifier)
+   */
+  parseVariableValue() {
+    if (this.match('STRING', null)) {
+      return {
+        type: 'StringLiteral',
+        value: this.previous().value
+      };
+    } else if (this.match('NUMBER', null)) {
+      return {
+        type: 'NumberLiteral',
+        value: this.previous().value
+      };
+    } else if (this.match('IDENTIFIER', null)) {
+      return {
+        type: 'Identifier',
+        value: this.previous().value
+      };
+    } else {
+      throw new Error(`Expected variable value at position ${this.peek().position}`);
+    }
   }
 
   /**
