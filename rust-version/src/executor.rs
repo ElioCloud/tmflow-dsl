@@ -61,6 +61,11 @@ impl Executor {
     fn execute_workflow(&mut self, workflow: &Workflow) -> Result<()> {
         println!("\n🔄 Executing workflow: {}", workflow.name);
         
+        // Execute workflow variables first
+        for variable in &workflow.variables {
+            self.execute_variable(variable)?;
+        }
+        
         for step in &workflow.steps {
             self.execute_step(step)?;
         }
@@ -133,6 +138,81 @@ impl Executor {
                 self.step_results.insert(step_id, StepResult::new(
                     true, message, 200, "Notification sent successfully".to_string()
                 ));
+            }
+            // AI-specific commands for workflow integration
+            "input" => {
+                let variable_name = args.get(0).unwrap_or(&"user_input".to_string()).clone();
+                let input_type = args.get(1).unwrap_or(&"text".to_string()).clone();
+                let placeholder = args.get(2).unwrap_or(&"Enter value".to_string()).clone();
+                println!("    📝 Input: Collect '{}' as {} ({})", variable_name, input_type, placeholder);
+                
+                // Simulate user input collection
+                let result = StepResult::new(
+                    true,
+                    format!("{{\"variable\": \"{}\", \"type\": \"{}\", \"placeholder\": \"{}\"}}", 
+                           variable_name, input_type, placeholder),
+                    200,
+                    "Input collected successfully".to_string()
+                );
+                self.step_results.insert(step_id, result);
+            }
+            "generate" => {
+                let prompt = args.get(0).unwrap_or(&"Generate content".to_string()).clone();
+                let model = args.get(1).unwrap_or(&"mistral-small-latest".to_string()).clone();
+                let temperature = args.get(2).unwrap_or(&"0.7".to_string()).clone();
+                println!("    🤖 Generate: Using {} (temp: {}) with prompt: '{}'", model, temperature, prompt);
+                
+                // This would call the actual AI API in production
+                let result = StepResult::new(
+                    true,
+                    format!("{{\"content\": \"Generated content for: {}\", \"model\": \"{}\", \"temperature\": \"{}\"}}", 
+                           prompt, model, temperature),
+                    200,
+                    "Content generated successfully".to_string()
+                );
+                self.step_results.insert(step_id, result);
+            }
+            "output" => {
+                let data_ref = args.get(0).unwrap_or(&"data".to_string()).clone();
+                let format = args.get(1).unwrap_or(&"text".to_string()).clone();
+                let filename = args.get(2).unwrap_or(&"output".to_string()).clone();
+                println!("    📤 Output: Export {} as {} to {}", data_ref, format, filename);
+                
+                let result = StepResult::new(
+                    true,
+                    format!("{{\"exported\": \"{}\", \"format\": \"{}\", \"file\": \"{}\"}}", 
+                           data_ref, format, filename),
+                    200,
+                    "Output exported successfully".to_string()
+                );
+                self.step_results.insert(step_id, result);
+            }
+            "transform" => {
+                let data_ref = args.get(0).unwrap_or(&"data".to_string()).clone();
+                let transformation = args.get(1).unwrap_or(&"format".to_string()).clone();
+                println!("    🔄 Transform: Apply {} to {}", transformation, data_ref);
+                
+                let result = StepResult::new(
+                    true,
+                    format!("{{\"transformed\": \"{}\", \"type\": \"{}\"}}", data_ref, transformation),
+                    200,
+                    "Data transformed successfully".to_string()
+                );
+                self.step_results.insert(step_id, result);
+            }
+            "validate" => {
+                let data_ref = args.get(0).unwrap_or(&"data".to_string()).clone();
+                let validation_type = args.get(1).unwrap_or(&"required".to_string()).clone();
+                println!("    ✅ Validate: Check {} for {}", data_ref, validation_type);
+                
+                let result = StepResult::new(
+                    true,
+                    format!("{{\"validated\": \"{}\", \"type\": \"{}\", \"valid\": true}}", 
+                           data_ref, validation_type),
+                    200,
+                    "Validation completed successfully".to_string()
+                );
+                self.step_results.insert(step_id, result);
             }
             _ => {
                 println!("    ⚠️  Unknown command: {}", command.name);

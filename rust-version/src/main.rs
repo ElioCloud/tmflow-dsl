@@ -10,19 +10,16 @@ fn main() -> Result<()> {
     println!("🚀 TradeMinutes DSL Parser (Rust Version)");
     println!("===========================================");
     
-    // Example DSL code
+    // Example DSL code with AI commands
     let dsl_code = r#"
-workflow "TestFlow" {
-    let base_url = "https://api.com"
-    let endpoint = "/users"
+workflow "AI Content Generator" {
+    let topic = "artificial intelligence"
+    let model = "mistral-small-latest"
     
-    step 1: fetch(base_url + endpoint)
-    
-    if (step 1.status == 200) {
-        step 2: print("Success: " + step 1.data)
-    } else {
-        step 3: print("Error: " + step 1.status)
-    }
+    step 1: input("topic", "text", "Enter a topic to write about")
+    step 2: validate(step 1, "required")
+    step 3: generate("Write about " + topic, model, "0.7")
+    step 4: output(step 3, "pdf", "Generated Article")
 }
 "#;
 
@@ -37,6 +34,7 @@ workflow "TestFlow" {
     }
     
     // Parse
+    println!("\n🔧 Starting parsing...");
     let ast = parser::Parser::new(tokens).parse()?;
     println!("\n🌳 AST:");
     println!("{:#?}", ast);

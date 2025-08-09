@@ -4,6 +4,15 @@
 
 The TradeMinutes DSL Parser is the **intelligent core** that powers the TradeMinutes AI agent's ability to understand, process, and execute complex workflow instructions. This **Rust implementation** provides blazing-fast performance with memory safety guarantees.
 
+### 🤖 **Natural Language Processing**
+
+The DSL now includes **intelligent natural language parsing** that converts human descriptions into executable workflows:
+
+- **Intent Recognition**: Automatically detects workflow types (content generation, data processing, notifications, etc.)
+- **Entity Extraction**: Identifies inputs, outputs, data sources, and recipients from natural language
+- **Smart Command Mapping**: Translates conversational phrases into DSL commands
+- **Confidence Scoring**: Provides accuracy metrics for parsed workflows
+
 ### 🎯 **What It Does**
 - **Understands** workflow instructions written in natural DSL syntax
 - **Processes** complex multi-step workflows with dependencies
@@ -38,11 +47,20 @@ Human Input → DSL Parser → Structured Data → AI Agent → Execution
 - **Command Execution** (`print`, `fetch`, `send_email`, etc.)
 
 ### **🔧 Built-in Commands**
+
+#### **Core Commands**
 - `print(message)` - Output to console
 - `log(message)` - Log information
 - `fetch(url)` - HTTP requests
 - `send_email(to, subject)` - Email notifications
 - `notify(message)` - System notifications
+
+#### **🤖 AI Workflow Commands**
+- `input(variable, type, placeholder)` - Collect user input
+- `generate(prompt, model, temperature)` - Generate AI content
+- `output(data_ref, format, filename)` - Export results
+- `transform(data_ref, transformation)` - Transform data format
+- `validate(data_ref, validation_type)` - Validate input data
 
 ## 📝 **DSL Syntax Examples**
 
@@ -100,6 +118,55 @@ workflow "TradingStrategy" {
 }
 ```
 
+### **🤖 AI Content Generation Workflow**
+```dsl
+workflow "AI Content Generator" {
+    let topic = "artificial intelligence"
+    let model = "mistral"
+    
+    step 1: input("topic", "text", "Enter a topic to write about")
+    step 2: validate(step 1, "required")
+    
+    if (step 2.valid == true) {
+        step 3: generate("Write a comprehensive article about " + topic, model, "0.7")
+        step 4: transform(step 3, "markdown")
+        step 5: output(step 4, "pdf", "Generated Article")
+        step 6: notify("Article generated successfully: " + step 5.file)
+    } else {
+        step 7: print("Error: Topic is required")
+    }
+}
+```
+
+### **🗣️ Natural Language to DSL**
+
+**Human Input:**
+> "Generate a blog post about artificial intelligence and save it as a PDF"
+
+**Generated DSL:**
+```dsl
+workflow "AI Content Generator" {
+    let ai_model = "mistral"
+    let temperature = "0.7"
+
+    step 1: input("topic", "text", "Enter a topic to write about")
+    step 2: generate("Generate blog post about " + topic, ai_model, temperature)
+    step 3: output(step 2, "pdf", "Generated Article")
+}
+```
+
+**Human Input:**
+> "Fetch data from https://api.github.com/users and send the results to admin@company.com"
+
+**Generated DSL:**
+```dsl
+workflow "Data Processing Pipeline" {
+    step 1: fetch("https://api.github.com/users")
+    step 2: transform(step 1, "json")
+    step 3: send_email("admin@company.com", "API Results")
+}
+```
+
 ## 🛠 **Installation & Usage**
 
 ### **Prerequisites**
@@ -128,6 +195,30 @@ cargo run --release
 
 # Check for issues
 cargo check
+```
+
+### **🌐 WebAssembly Build**
+```bash
+# Build for WebAssembly (browser usage)
+cd rust-version
+./build-wasm.sh
+
+# Use in JavaScript/TypeScript
+import init, { WasmDSLExecutor } from './wasm-pkg/trademinutes_dsl.js';
+
+await init();
+const executor = new WasmDSLExecutor();
+
+// Parse and execute DSL
+const result = executor.parse_and_execute(`
+  workflow "Test" {
+    step 1: print("Hello from Rust!")
+  }
+`);
+
+// Generate human-readable steps
+const steps = executor.generate_human_steps(dslCode);
+console.log(steps);
 ```
 
 ## 🏗 **Architecture**

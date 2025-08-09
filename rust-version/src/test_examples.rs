@@ -94,6 +94,34 @@ workflow "ComplexExample" {
         Ok(_) => println!("✅ Example 4 executed successfully"),
         Err(e) => println!("❌ Example 4 failed: {}", e),
     }
+    
+    // Example 5: AI Agent Workflow
+    let example5 = r#"
+workflow "AI Content Generator" {
+    let topic = "artificial intelligence"
+    let model = "mistral-small-latest"
+    
+    step 1: input("topic", "text", "Enter a topic to write about")
+    step 2: validate(step 1, "required")
+    
+    if (step 2.valid == true) {
+        step 3: generate("Write a comprehensive article about " + topic, model, "0.7")
+        step 4: transform(step 3, "markdown")
+        step 5: output(step 4, "pdf", "Generated Article")
+        step 6: notify("Article generated successfully: " + step 5.file)
+    } else {
+        step 7: print("Error: Topic is required")
+    }
+}
+"#;
+    
+    println!("\n📝 Example 5: AI Agent Workflow");
+    println!("{}", example5);
+    
+    match run_dsl_example(example5) {
+        Ok(_) => println!("✅ Example 5 executed successfully"),
+        Err(e) => println!("❌ Example 5 failed: {}", e),
+    }
 }
 
 pub fn test_tokenization() {

@@ -9,6 +9,7 @@ pub struct Program {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Workflow {
     pub name: String,
+    pub variables: Vec<VariableDeclaration>,
     pub steps: Vec<Step>,
 }
 

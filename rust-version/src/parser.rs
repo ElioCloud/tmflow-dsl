@@ -40,14 +40,20 @@ impl Parser {
         
         self.consume(TokenType::LeftBrace, "Expected '{' after workflow name")?;
         
+        let mut variables = Vec::new();
         let mut steps = Vec::new();
         while !self.check(TokenType::RightBrace) && !self.is_at_end() {
-            steps.push(self.parse_step()?);
+            // Handle variable declarations inside workflows
+            if self.check(TokenType::Let) || self.check(TokenType::Var) || self.check(TokenType::Const) {
+                variables.push(self.parse_variable_declaration()?);
+            } else {
+                steps.push(self.parse_step()?);
+            }
         }
         
         self.consume(TokenType::RightBrace, "Expected '}' after workflow body")?;
         
-        Ok(Workflow { name, steps })
+        Ok(Workflow { name, variables, steps })
     }
     
     fn parse_step(&mut self) -> Result<Step> {
@@ -67,7 +73,20 @@ impl Parser {
     }
     
     fn parse_command(&mut self) -> Result<Command> {
-        let name = self.consume_identifier("Expected command name")?;
+        let name = match self.peek().token_type {
+            TokenType::Identifier => self.consume_identifier("Expected command name")?,
+            TokenType::Print => { self.advance(); "print".to_string() },
+            TokenType::Log => { self.advance(); "log".to_string() },
+            TokenType::Fetch => { self.advance(); "fetch".to_string() },
+            TokenType::SendEmail => { self.advance(); "send_email".to_string() },
+            TokenType::Notify => { self.advance(); "notify".to_string() },
+            TokenType::Input => { self.advance(); "input".to_string() },
+            TokenType::Generate => { self.advance(); "generate".to_string() },
+            TokenType::Output => { self.advance(); "output".to_string() },
+            TokenType::Transform => { self.advance(); "transform".to_string() },
+            TokenType::Validate => { self.advance(); "validate".to_string() },
+            _ => return Err(anyhow!("Expected command name")),
+        };
         
         let arguments = if self.check(TokenType::LeftParen) {
             self.consume(TokenType::LeftParen, "Expected '('")?;

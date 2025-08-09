@@ -16,6 +16,12 @@ pub enum TokenType {
     Fetch,
     SendEmail,
     Notify,
+    // AI workflow commands
+    Input,
+    Generate,
+    Output,
+    Transform,
+    Validate,
     
     // Literals
     String,
@@ -89,6 +95,12 @@ impl Lexer {
         keywords.insert("fetch".to_string(), TokenType::Fetch);
         keywords.insert("send_email".to_string(), TokenType::SendEmail);
         keywords.insert("notify".to_string(), TokenType::Notify);
+        // AI workflow commands
+        keywords.insert("input".to_string(), TokenType::Input);
+        keywords.insert("generate".to_string(), TokenType::Generate);
+        keywords.insert("output".to_string(), TokenType::Output);
+        keywords.insert("transform".to_string(), TokenType::Transform);
+        keywords.insert("validate".to_string(), TokenType::Validate);
         
         Lexer {
             source: source.chars().collect(),
